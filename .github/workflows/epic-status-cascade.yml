@@ -40,9 +40,6 @@ jobs:
                             id
                             number
                             state
-                            labels(first: 10) {
-                              nodes { name }
-                            }
                             subIssues(first: 30) {
                               nodes {
                                 id
@@ -85,10 +82,12 @@ jobs:
 
             const items = result.node.items.nodes;
 
-            // ── Filter to epics only ──────────────────────────────────────────
+            // ── Filter to epics using the Type project field (avoids needing repo scope) ─
             const epics = items.filter(item => {
-              const labels = item.content?.labels?.nodes?.map(l => l.name) ?? [];
-              return labels.includes("epic");
+              const typeField = item.fieldValues.nodes.find(
+                fv => fv?.field?.name === "Type"
+              );
+              return typeField?.name === "Epic";
             });
 
             console.log(`Found ${epics.length} epics to evaluate.`);
