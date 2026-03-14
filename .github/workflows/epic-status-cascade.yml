@@ -93,6 +93,7 @@ jobs:
             console.log(`Found ${epics.length} epics to evaluate.`);
 
             for (const epic of epics) {
+              if (!epic.content) { console.log("Epic item has no content, skipping."); continue; }
               const epicNum     = epic.content.number;
               const subIssues   = epic.content.subIssues?.nodes ?? [];
 
