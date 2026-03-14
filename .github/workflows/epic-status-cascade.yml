@@ -1,85 +1,78 @@
 name: Sync Epic Status from Stories
 
-# Fires whenever a project item's field is edited (e.g. Status changes)
+# Three triggers:
+# 1. issues closed/reopened  → instant cascade for Done / re-opened stories
+# 2. schedule every 30 min   → catches In Progress changes (no native event exists)
+# 3. workflow_dispatch        → manual trigger for immediate sync
 on:
-  projects_v2_item:
-    types: [edited]
-
-permissions:
-  issues: write
+  issues:
+    types: [closed, reopened]
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
 
 jobs:
   sync-epic-status:
     runs-on: ubuntu-latest
-    # Only run when the Status field changed
-    if: github.event.changes.field_value.field_name == 'Status'
-
     steps:
-      - name: Cascade status from story to parent epic
+      - name: Sync all epic statuses from their stories
         uses: actions/github-script@v7
-        env:
-          # Requires a PAT with `project` scope stored as PROJECT_TOKEN secret.
-          # Create one at: https://github.com/settings/tokens
-          # Then add it at: https://github.com/DeDuva/pm-mech/settings/secrets/actions
-          GH_TOKEN: ${{ secrets.PROJECT_TOKEN || secrets.GITHUB_TOKEN }}
         with:
-          github-token: ${{ env.GH_TOKEN }}
+          github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
-            const PROJECT_ID = "PVT_kwHOAHxoFM4BRq8a";
-            const STATUS_FIELD_ID = "PVTSSF_lAHOAHxoFM4BRq8azg_bmUg";
-            const STATUS_OPTIONS = {
-              "Todo":        "f75ad846",
-              "In Progress": "47fc9ee4",
-              "Done":        "98236657"
-            };
+            const PROJECT_ID    = "PVT_kwHOAHxoFM4BRq8a";
+            const STATUS_FIELD  = "PVTSSF_lAHOAHxoFM4BRq8azg_bmUg";
+            const OPT_TODO      = "f75ad846";
+            const OPT_INPROG    = "47fc9ee4";
+            const OPT_DONE      = "98236657";
 
-            const itemNodeId = context.payload.projects_v2_item.node_id;
-
-            // ── 1. Get the changed item's issue and its parent epic ──────────
-            const itemData = await github.graphql(`
-              query($id: ID!) {
-                node(id: $id) {
-                  ... on ProjectV2Item {
-                    content {
-                      ... on Issue {
-                        id
-                        number
-                        state
-                        parent { id number }
-                      }
-                    }
-                  }
-                }
-              }`, { id: itemNodeId });
-
-            const issue = itemData.node.content;
-            if (!issue?.parent) {
-              console.log(`Issue #${issue?.number} has no parent epic — nothing to cascade.`);
-              return;
-            }
-
-            const epicIssueId   = issue.parent.id;
-            const epicIssueNum  = issue.parent.number;
-            console.log(`Story #${issue.number} changed. Checking parent epic #${epicIssueNum}…`);
-
-            // ── 2. Get all sub-issues of the epic and their project statuses ─
-            const epicData = await github.graphql(`
-              query($id: ID!) {
-                node(id: $id) {
-                  ... on Issue {
-                    subIssues(first: 30) {
+            // ── Fetch all epics and their sub-issues from the project ─────────
+            const result = await github.graphql(`
+              query($projectId: ID!) {
+                node(id: $projectId) {
+                  ... on ProjectV2 {
+                    items(first: 50) {
                       nodes {
-                        number
-                        state
-                        projectItems(first: 5) {
-                          nodes {
-                            project { id }
-                            fieldValues(first: 20) {
+                        id
+                        type
+                        content {
+                          ... on Issue {
+                            id
+                            number
+                            state
+                            labels(first: 10) {
+                              nodes { name }
+                            }
+                            subIssues(first: 30) {
                               nodes {
-                                ... on ProjectV2ItemFieldSingleSelectValue {
-                                  name
-                                  field { ... on ProjectV2SingleSelectField { name } }
+                                id
+                                number
+                                state
+                                projectItems(first: 5) {
+                                  nodes {
+                                    project { id }
+                                    fieldValues(first: 20) {
+                                      nodes {
+                                        ... on ProjectV2ItemFieldSingleSelectValue {
+                                          name
+                                          field {
+                                            ... on ProjectV2SingleSelectField { name }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
                                 }
+                              }
+                            }
+                          }
+                        }
+                        fieldValues(first: 20) {
+                          nodes {
+                            ... on ProjectV2ItemFieldSingleSelectValue {
+                              name
+                              field {
+                                ... on ProjectV2SingleSelectField { name }
                               }
                             }
                           }
@@ -88,90 +81,76 @@ jobs:
                     }
                   }
                 }
-              }`, { id: epicIssueId });
+              }`, { projectId: PROJECT_ID });
 
-            const stories = epicData.node.subIssues.nodes;
+            const items = result.node.items.nodes;
 
-            // Extract Status for each story from THIS project
-            const statuses = stories.map(s => {
-              const projectItem = s.projectItems.nodes.find(
-                pi => pi.project.id === PROJECT_ID
-              );
-              if (!projectItem) return s.state === "CLOSED" ? "Done" : "Todo";
-              const statusField = projectItem.fieldValues.nodes.find(
-                fv => fv?.field?.name === "Status"
-              );
-              return statusField?.name ?? (s.state === "CLOSED" ? "Done" : "Todo");
+            // ── Filter to epics only ──────────────────────────────────────────
+            const epics = items.filter(item => {
+              const labels = item.content?.labels?.nodes?.map(l => l.name) ?? [];
+              return labels.includes("epic");
             });
 
-            console.log(`Sub-issue statuses: ${statuses.join(", ")}`);
+            console.log(`Found ${epics.length} epics to evaluate.`);
 
-            // ── 3. Derive the correct epic status ────────────────────────────
-            let targetStatus;
-            if (statuses.every(s => s === "Done")) {
-              targetStatus = "Done";
-            } else if (statuses.some(s => s === "In Progress" || s === "Done")) {
-              targetStatus = "In Progress";
-            } else {
-              targetStatus = "Todo";
-            }
+            for (const epic of epics) {
+              const epicNum     = epic.content.number;
+              const subIssues   = epic.content.subIssues?.nodes ?? [];
 
-            console.log(`→ Epic #${epicIssueNum} should be: ${targetStatus}`);
+              if (subIssues.length === 0) {
+                console.log(`Epic #${epicNum}: no sub-issues, skipping.`);
+                continue;
+              }
 
-            // ── 4. Find the epic's project item ID ───────────────────────────
-            const epicItemData = await github.graphql(`
-              query($id: ID!) {
-                node(id: $id) {
-                  ... on Issue {
-                    projectItems(first: 5) {
-                      nodes {
-                        id
-                        project { id }
-                        fieldValues(first: 20) {
-                          nodes {
-                            ... on ProjectV2ItemFieldSingleSelectValue {
-                              name
-                              field { ... on ProjectV2SingleSelectField { name } }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
+              // Get each story's current Status from THIS project
+              const statuses = subIssues.map(story => {
+                const projectItem = story.projectItems.nodes.find(
+                  pi => pi.project.id === PROJECT_ID
+                );
+                if (!projectItem) {
+                  return story.state === "CLOSED" ? "Done" : "Todo";
                 }
-              }`, { id: epicIssueId });
-
-            const epicProjectItem = epicItemData.node.projectItems.nodes.find(
-              pi => pi.project.id === PROJECT_ID
-            );
-            if (!epicProjectItem) {
-              console.log("Epic is not in this project — skipping.");
-              return;
-            }
-
-            const currentEpicStatus = epicProjectItem.fieldValues.nodes.find(
-              fv => fv?.field?.name === "Status"
-            )?.name;
-
-            if (currentEpicStatus === targetStatus) {
-              console.log(`Epic #${epicIssueNum} already set to "${targetStatus}" — no change needed.`);
-              return;
-            }
-
-            // ── 5. Update the epic's Status field ────────────────────────────
-            await github.graphql(`
-              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-                updateProjectV2ItemFieldValue(input: {
-                  projectId: $projectId
-                  itemId: $itemId
-                  fieldId: $fieldId
-                  value: { singleSelectOptionId: $optionId }
-                }) { projectV2Item { id } }
-              }`, {
-                projectId: PROJECT_ID,
-                itemId:    epicProjectItem.id,
-                fieldId:   STATUS_FIELD_ID,
-                optionId:  STATUS_OPTIONS[targetStatus]
+                const statusField = projectItem.fieldValues.nodes.find(
+                  fv => fv?.field?.name === "Status"
+                );
+                return statusField?.name ?? (story.state === "CLOSED" ? "Done" : "Todo");
               });
 
-            console.log(`✓ Epic #${epicIssueNum} updated: "${currentEpicStatus}" → "${targetStatus}"`);
+              // Derive target epic status
+              let target;
+              if (statuses.every(s => s === "Done")) {
+                target = { name: "Done",        id: OPT_DONE   };
+              } else if (statuses.some(s => s === "In Progress" || s === "Done")) {
+                target = { name: "In Progress", id: OPT_INPROG };
+              } else {
+                target = { name: "Todo",        id: OPT_TODO   };
+              }
+
+              // Get epic's current status
+              const current = epic.fieldValues.nodes.find(
+                fv => fv?.field?.name === "Status"
+              )?.name ?? "Todo";
+
+              if (current === target.name) {
+                console.log(`Epic #${epicNum}: already "${target.name}" ✓`);
+                continue;
+              }
+
+              // Update the epic's status
+              await github.graphql(`
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(input: {
+                    projectId: $projectId
+                    itemId:    $itemId
+                    fieldId:   $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }) { projectV2Item { id } }
+                }`, {
+                  projectId: PROJECT_ID,
+                  itemId:    epic.id,
+                  fieldId:   STATUS_FIELD,
+                  optionId:  target.id
+                });
+
+              console.log(`Epic #${epicNum}: "${current}" → "${target.name}" ✓`);
+            }
