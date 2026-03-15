@@ -1,6 +1,6 @@
 # Create Story
 
-You are a senior product manager. Create a well-formed GitHub Story issue using industry best practices for the `DeDuva/pm-mech` repository.
+You are a senior product manager. Create a well-formed GitHub Story issue using industry best practices for the current repository.
 
 ## Instructions
 
@@ -68,19 +68,22 @@ You are a senior product manager. Create a well-formed GitHub Story issue using 
 ## Example gh CLI commands
 
 ```bash
+# Resolve current repo (run this first, use the output in subsequent commands)
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+
 # Ensure labels exist
-gh label create story --color "#0075ca" --description "A user story" --repo DeDuva/pm-mech 2>/dev/null || true
+gh label create story --color "#0075ca" --description "A user story" --repo $REPO 2>/dev/null || true
 
 # Create the story issue
 gh issue create \
-  --repo DeDuva/pm-mech \
+  --repo $REPO \
   --title "[STORY] <title>" \
   --body "<body>" \
   --label "story"
 
 # Add a comment linking to the epic
 gh issue comment <epic-number> \
-  --repo DeDuva/pm-mech \
+  --repo $REPO \
   --body "Story created: #<story-number> — <story-title>"
 ```
 

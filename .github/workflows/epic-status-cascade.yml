@@ -20,11 +20,11 @@ jobs:
         with:
           github-token: ${{ secrets.PROJECT_TOKEN }}
           script: |
-            const PROJECT_ID    = "PVT_kwHOAHxoFM4BRq8a";
-            const STATUS_FIELD  = "PVTSSF_lAHOAHxoFM4BRq8azg_bmUg";
-            const OPT_TODO      = "f75ad846";
-            const OPT_INPROG    = "47fc9ee4";
-            const OPT_DONE      = "98236657";
+            const PROJECT_ID    = "${{ vars.PROJECT_ID }}";
+            const STATUS_FIELD  = "${{ vars.STATUS_FIELD }}";
+            const OPT_TODO      = "${{ vars.STATUS_OPT_TODO }}";
+            const OPT_INPROG    = "${{ vars.STATUS_OPT_INPROG }}";
+            const OPT_DONE      = "${{ vars.STATUS_OPT_DONE }}";
 
             // ── Fetch all epics and their sub-issues from the project ─────────
             const result = await github.graphql(`

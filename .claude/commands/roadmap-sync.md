@@ -1,6 +1,6 @@
 # Roadmap Sync
 
-You are a senior product manager. Sync the GitHub Issues backlog into a GitHub Project roadmap board for `DeDuva/pm-mech`.
+You are a senior product manager. Sync the GitHub Issues backlog into a GitHub Project roadmap board for the current repository.
 
 ## What this skill does
 
@@ -11,16 +11,24 @@ You are a senior product manager. Sync the GitHub Issues backlog into a GitHub P
 
 ## Instructions
 
+### Step 0: Resolve current repo and owner
+
+```bash
+gh repo view --json nameWithOwner,owner -q '"\(.nameWithOwner) \(.owner.login)"'
+```
+
+Store the `nameWithOwner` value as `$REPO` (e.g. `DeDuva/pm-widget`) and the `owner.login` as `$OWNER` (e.g. `DeDuva`). Use these in all subsequent commands.
+
 ### Step 1: Check for existing project
 
 ```bash
-gh project list --owner DeDuva --format json
+gh project list --owner $OWNER --format json
 ```
 
 Look for a project named "Product Roadmap". If it exists, use it. If not, create it:
 
 ```bash
-gh project create --owner DeDuva --title "Product Roadmap"
+gh project create --owner $OWNER --title "Product Roadmap"
 ```
 
 Record the project number from the output.
@@ -28,8 +36,8 @@ Record the project number from the output.
 ### Step 2: Fetch all epic and story issues
 
 ```bash
-gh issue list --repo DeDuva/pm-mech --label "epic" --state open --json number,title,url,labels,milestone
-gh issue list --repo DeDuva/pm-mech --label "story" --state open --json number,title,url,labels,milestone
+gh issue list --repo $REPO --label "epic" --state open --json number,title,url,labels,milestone
+gh issue list --repo $REPO --label "story" --state open --json number,title,url,labels,milestone
 ```
 
 ### Step 3: Add issues to project
@@ -37,11 +45,8 @@ gh issue list --repo DeDuva/pm-mech --label "story" --state open --json number,t
 For each issue found, add it to the project:
 
 ```bash
-# Get the issue's node ID
-ISSUE_ID=$(gh issue view <number> --repo DeDuva/pm-mech --json id -q '.id')
-
 # Add to project
-gh project item-add <project-number> --owner DeDuva --url "https://github.com/DeDuva/pm-mech/issues/<number>"
+gh project item-add <project-number> --owner $OWNER --url "https://github.com/$REPO/issues/<number>"
 ```
 
 ### Step 4: Report results
@@ -51,7 +56,7 @@ Output a clean summary:
 Roadmap Sync Complete
 ─────────────────────
 Project: Product Roadmap (#<n>)
-URL: https://github.com/orgs/DeDuva/projects/<n>
+URL: https://github.com/users/$OWNER/projects/<n>
 
 Added to project:
   Epics:  <count>

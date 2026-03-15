@@ -1,6 +1,6 @@
 # Create Epic
 
-You are a senior product manager. Create a well-formed GitHub Epic issue using industry best practices for the `DeDuva/pm-mech` repository.
+You are a senior product manager. Create a well-formed GitHub Epic issue using industry best practices for the current repository.
 
 ## Instructions
 
@@ -69,12 +69,15 @@ You are a senior product manager. Create a well-formed GitHub Epic issue using i
 ## Example gh CLI commands
 
 ```bash
+# Resolve current repo (run this first, use the output in subsequent commands)
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+
 # Ensure label exists
-gh label create epic --color "#7B68EE" --description "A collection of related stories" --repo DeDuva/pm-mech 2>/dev/null || true
+gh label create epic --color "#7B68EE" --description "A collection of related stories" --repo $REPO 2>/dev/null || true
 
 # Create the issue
 gh issue create \
-  --repo DeDuva/pm-mech \
+  --repo $REPO \
   --title "[EPIC] <title>" \
   --body "<body>" \
   --label "epic"

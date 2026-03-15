@@ -39,11 +39,17 @@ Present stories grouped by epic and ask for confirmation before creating issues.
 ### Step 4: Create GitHub Issues
 Once the user confirms, create all issues using `gh` CLI:
 
+0. **Resolve current repo** (do this first; use the result in all subsequent commands):
+   ```bash
+   gh repo view --json nameWithOwner -q '.nameWithOwner'
+   ```
+   Store the output as `$REPO` (e.g. `DeDuva/pm-widget`).
+
 1. **Set up labels** (create if missing):
    ```bash
-   gh label create epic --color "#7B68EE" --description "Epic: a collection of related stories" --repo DeDuva/pm-mech 2>/dev/null || true
-   gh label create story --color "#0075ca" --description "User story" --repo DeDuva/pm-mech 2>/dev/null || true
-   gh label create prfaq-import --color "#e4e669" --description "Created from PR/FAQ import" --repo DeDuva/pm-mech 2>/dev/null || true
+   gh label create epic --color "#7B68EE" --description "Epic: a collection of related stories" --repo $REPO 2>/dev/null || true
+   gh label create story --color "#0075ca" --description "User story" --repo $REPO 2>/dev/null || true
+   gh label create prfaq-import --color "#e4e669" --description "Created from PR/FAQ import" --repo $REPO 2>/dev/null || true
    ```
 
 2. **Create each epic** using the Epic template (see `/epic` command for template).
