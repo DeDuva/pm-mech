@@ -62,17 +62,21 @@ Added to project:
   Epics:  <count>
   Stories: <count>
 
-Tip: Open the project URL to configure views, group by epic,
-and set iteration fields for sprint planning.
+Open the project to see your items across three views:
+  • Backlog     — all items in a table
+  • Sprint Board — Todo / In Progress / Done columns
+  • Roadmap     — timeline view (set milestone dates to populate)
 ```
 
-## Roadmap View Recommendations
+## Project Views
 
-After syncing, advise the user to configure these views manually in the GitHub Projects UI:
+If this repo was created with the `spawn` skill, three views are already set up:
 
-1. **Backlog view** — Table layout, group by `Label` (epic vs story), sorted by priority
-2. **Roadmap view** — Roadmap layout, date field = milestone due date, group by epic
-3. **Sprint board** — Board layout, column field = Status (Todo / In Progress / Done), filtered to current milestone
+1. **Backlog** — Table layout; all epics and stories in one place
+2. **Sprint Board** — Board layout with Todo / In Progress / Done columns (driven by the `epic-status-cascade` workflow)
+3. **Roadmap** — Roadmap layout; assign milestones with due dates to see a timeline
+
+If the views are missing (e.g. the repo was created manually), create them in the GitHub Projects UI or re-run the view creation GraphQL mutations from the `spawn` skill (Step 7b).
 
 ## Notes
 
