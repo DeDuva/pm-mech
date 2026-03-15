@@ -2,16 +2,18 @@
 
 End-to-end verification that the factory pipeline works correctly. Run this plan against a fresh test repo before shipping changes to pm-mech.
 
-**Estimated time:** 20–30 minutes
+**Estimated time:** 30–40 minutes (plus manual browser verification)
 **Prerequisites:** `gh` CLI authenticated, Claude Code open on `pm-mech`
 
 ---
 
 ## Setup
 
-Create a scratch PAT or reuse your existing `PROJECT_TOKEN` PAT. You will need it in TC-04.
+Create a scratch PAT or reuse your existing `PROJECT_TOKEN` PAT. You will need it in TC-02.
 
-All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-20260314`). It is deleted in the Cleanup section.
+All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-20260314`).
+
+**Artifacts are left in place** after the test run — use TC-10 to verify them in the browser, then delete manually if desired.
 
 ---
 
@@ -79,8 +81,10 @@ All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-202603
 **Objective:** Verify all skills correctly identify the new repo (not pm-mech) when run from the cloned test repo.
 
 **Steps:**
-1. Clone the test repo and open it in Claude Code:
+1. Clone the test repo **into the same parent folder as pm-mech**, then open it in Claude Code:
    ```bash
+   # From the pm-mech parent directory (e.g. C:\Users\dovzi\dev):
+   cd ..
    git clone https://github.com/DeDuva/pm-test-<date>.git
    cd pm-test-<date>
    claude
@@ -98,7 +102,7 @@ All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-202603
 
 ## TC-04 — `/prfaq`: backlog generation
 
-**Objective:** Verify that running `/prfaq` in the test repo creates issues in the test repo, not in pm-mech.
+**Objective:** Verify that running `/prfaq` in the test repo creates issues in the test repo, saves `PRFAQ.md`, and does not touch pm-mech.
 
 **Steps:**
 1. From the `pm-test-<date>` Claude Code session, run `/prfaq`
@@ -139,8 +143,10 @@ A: Freemium — free for up to 20 tasks, $8/month for unlimited.
 | Zero issues created in pm-mech | `gh issue list --repo DeDuva/pm-mech --json number --jq length` → same count as before this test |
 | Stories reference parent epics | Open any story issue in browser → body contains `Part of #<number>` |
 | Epics have story comments | `gh issue view <epic-number> --repo DeDuva/pm-test-<date> --comments` → at least one comment linking child stories |
+| `PRFAQ.md` committed to repo | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md` → 200 OK (file exists) |
+| `PRFAQ.md` contains the original text | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md --jq '.content' \| base64 -d` → contains "TaskPilot" |
 
-**Pass criteria:** Issues land in the test repo only; all structural links are correct.
+**Pass criteria:** Issues land in the test repo only; all structural links are correct; PRFAQ.md is committed.
 
 ---
 
@@ -268,19 +274,62 @@ A: Freemium — free for up to 20 tasks, $8/month for unlimited.
 
 ---
 
-## Cleanup
+## TC-10 — Manual browser verification
 
-After all test cases pass, delete the test repo and its project:
+**Objective:** Visually confirm the full end-to-end output looks correct in the GitHub UI.
 
-```bash
-# Delete the test repo (this also removes issues and workflows)
-gh repo delete DeDuva/pm-test-<date> --yes
+**This is a manual step — open each URL in your browser.**
 
-# Find and delete the orphaned project
-gh project list --owner DeDuva --format json --jq '.projects[] | select(.title | startswith("Product Roadmap: pm-test")) | .number'
-# Then:
-gh project delete <project-number> --owner DeDuva
-```
+### 10a — Repository contents
+
+Open `https://github.com/DeDuva/pm-test-<date>`
+
+| Check | What to look for |
+|---|---|
+| `PRFAQ.md` present | File listed in the repo root |
+| `PRFAQ.md` content | Click the file — should contain the full TaskPilot PR/FAQ text |
+| `README.md` updated | If `/prfaq` auto-ran `/readme`, the README should reflect the product, not the pm-mech template |
+| `.agents/skills/` present | Directory visible in the file tree |
+| `.github/workflows/` present | `epic-status-cascade.yml` listed |
+
+### 10b — Issues
+
+Open `https://github.com/DeDuva/pm-test-<date>/issues`
+
+| Check | What to look for |
+|---|---|
+| Epics visible | Issues with `[EPIC]` prefix and purple `epic` label |
+| Stories visible | Issues with `[STORY]` prefix and blue `story` label |
+| `prfaq-import` label | Yellow label on all issues from TC-04 |
+| Parent links | Open a story → body contains `Part of #<epic-number>` |
+| Story comments on epics | Open an epic → comments section lists child story numbers |
+
+### 10c — GitHub Project board
+
+Open the project URL printed by `/roadmap-sync` (format: `https://github.com/users/DeDuva/projects/<n>`)
+
+| Check | What to look for |
+|---|---|
+| All epics appear | Cards for every `[EPIC]` issue |
+| All stories appear | Cards for every `[STORY]` issue |
+| Status column visible | Default "Status" field shown |
+| Epic from TC-08 is "Done" | The epic you closed all stories for shows "Done" status |
+
+### 10d — Project views (manual setup, if not already configured)
+
+GitHub Projects v2 does not support view creation via API — set these up once:
+
+1. Click **+ New view** → **Table** layout → rename to **Backlog**
+2. Click **+ New view** → **Board** layout → group by **Status** → rename to **Sprint Board**
+3. Click **+ New view** → **Roadmap** layout → rename to **Roadmap**
+
+| Check | What to look for |
+|---|---|
+| Backlog view | All issues visible in a flat table |
+| Sprint Board | Todo / In Progress / Done columns with issue cards |
+| Roadmap view | Timeline visible (assign milestones with due dates to populate bars) |
+
+**Pass criteria:** All items visible in the UI; project board shows correct statuses; PRFAQ.md matches the source text.
 
 ---
 
@@ -291,14 +340,15 @@ gh project delete <project-number> --owner DeDuva
 | TC-01 | `/spawn` repo creation | |
 | TC-02 | Workflow smoke test | |
 | TC-03 | Repo-agnostic skill resolution | |
-| TC-04 | `/prfaq` backlog generation | |
+| TC-04 | `/prfaq` backlog generation + PRFAQ.md saved | |
 | TC-05 | `/epic` single epic | |
 | TC-06 | `/story` with parent link | |
 | TC-07 | `/roadmap-sync` project population | |
 | TC-08 | Epic status cascade | |
 | TC-09 | Spawn idempotency | |
+| TC-10 | Manual browser verification | |
 
-All 9 TCs must pass before merging changes to `main`.
+All 10 TCs must pass before merging changes to `main`.
 
 ---
 
@@ -307,3 +357,5 @@ All 9 TCs must pass before merging changes to `main`.
 - **`PROJECT_TOKEN` secret** is not verifiable via CLI (write-only). TC-02 implicitly validates it by running the workflow.
 - **Status cascade timing** — the workflow runs on a 30-minute schedule and on `issues.closed`. In TC-08 we trigger it manually to avoid waiting.
 - **GitHub Projects UI fields** (Priority, Quarter, Sprint) are not covered here — they require manual setup and have no CLI assertions.
+- **Project views** cannot be created via API (GitHub Projects v2 limitation). TC-10d covers manual setup.
+- **Artifacts are intentionally left in place** after a test run. Delete manually via `gh repo delete DeDuva/pm-test-<date> --yes` and `gh project delete <n> --owner DeDuva` when you are done reviewing.

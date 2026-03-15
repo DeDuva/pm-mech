@@ -22,11 +22,19 @@ Summarize your understanding back to the user in 3-5 bullets. Ask: "Does this ca
 
 ### Step 1b: Save the PR/FAQ as PRFAQ.md
 
-Once the user confirms the summary, save the source PR/FAQ document to `PRFAQ.md` in the repo root and commit it:
+Once the user confirms the summary, write the full original PR/FAQ text (exactly as the user provided it, unmodified) to a file named `PRFAQ.md` in the repository root, then commit and push.
 
+**If your agent has a file-write tool** (e.g. Claude Code's Write tool), use it to create `PRFAQ.md` with the exact PR/FAQ content.
+
+**If your agent can only run shell commands**, use a heredoc:
 ```bash
-# Write the PR/FAQ content to PRFAQ.md (the full original text the user provided)
-# Then commit and push:
+cat > PRFAQ.md << 'PRFAQ_EOF'
+<paste the full PR/FAQ text here>
+PRFAQ_EOF
+```
+
+Then commit and push:
+```bash
 git add PRFAQ.md
 git commit -m "docs: add source PR/FAQ document"
 git push
