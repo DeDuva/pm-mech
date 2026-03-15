@@ -1,6 +1,8 @@
 # pm-mech
 
-A product management factory built on GitHub Issues and GitHub Projects. Drop in a PR/FAQ document and get a fully structured backlog — epics, user stories, roadmap board, and automated status tracking — in minutes.
+A product management factory built on GitHub Issues and GitHub Projects. Drop in a PR/FAQ document and get a fully structured backlog — epics, user stories, roadmap board, automated status tracking, and a product README — in minutes.
+
+Skills are defined in `.agents/skills/` as plain Markdown — readable and executable by any AI agent, not just Claude Code.
 
 ## How it works
 
@@ -16,7 +18,7 @@ PR/FAQ document
       └── Wires the epic-status-cascade workflow
             │
             ▼
-  Clone new repo → open in Claude
+  Clone new repo → open in your AI agent
             │
             ▼
        /prfaq
@@ -24,12 +26,19 @@ PR/FAQ document
             ├── Parses the PR/FAQ
             ├── Proposes epics (confirms with you)
             ├── Proposes stories per epic (confirms with you)
-            └── Creates all GitHub Issues
+            ├── Creates all GitHub Issues
+            └── Saves PRFAQ.md → auto-runs /readme
                       │
                       ▼
-            /roadmap-sync
+            /readme (auto-called by /prfaq)
                       │
-                      └── Adds all issues to the Project board
+                      ├── Reads PRFAQ.md + issues + project URL
+                      └── Commits product README.md to the repo
+                                │
+                                ▼
+                      /roadmap-sync
+                                │
+                                └── Adds all issues to the Project board
 ```
 
 Each product lives in its own repo. pm-mech is the factory — you never work in it directly after spawning.
@@ -114,12 +123,14 @@ From this point on, you work entirely inside the new product repo. pm-mech is on
 /prfaq
 ```
 
-Claude will ask you to paste your PR/FAQ. It then:
+Your AI agent will ask you to paste your PR/FAQ. It then:
 
 1. Summarizes the product vision and asks you to confirm
 2. Proposes 3–8 epics — you approve, rename, or cut
 3. Proposes 3–8 stories per epic — you approve, edit, or cut
 4. Creates all GitHub Issues (epics first, then stories with parent links)
+5. Saves the PR/FAQ text as `PRFAQ.md` and commits it
+6. Automatically runs `/readme` to generate a product-specific README
 
 You stay in the loop at every step. Nothing is created until you confirm.
 
@@ -146,6 +157,7 @@ Once your repo is set up, use these skills from inside the product repo:
 | `/epic` | Interactively create a new epic with full template |
 | `/story` | Create a new story linked to a parent epic |
 | `/roadmap-sync` | Re-sync any new issues into the project board |
+| `/readme` | Regenerate the product README from current backlog |
 | `/prfaq` | Load another PR/FAQ (e.g. for a v2 or a new feature area) |
 
 ---
@@ -205,19 +217,30 @@ Stories must pass [INVEST](https://en.wikipedia.org/wiki/INVEST_(mnemonic)):
 
 ```
 pm-mech/
-├── README.md                          ← you are here
-├── CLAUDE.md                          ← instructions for Claude Code
+├── README.md                               ← you are here
+├── CLAUDE.md                               ← instructions for Claude Code
+├── .agents/
+│   └── skills/                             ← agent-agnostic skill definitions
+│       ├── spawn/SKILL.md                  ← factory: creates new product repos
+│       ├── prfaq/SKILL.md                  ← PR/FAQ → epics + stories + README
+│       ├── epic/SKILL.md                   ← creates a single epic
+│       ├── story/SKILL.md                  ← creates a single story
+│       ├── roadmap-sync/SKILL.md           ← syncs issues into GitHub Projects
+│       └── readme/SKILL.md                 ← generates product README
 ├── .claude/
-│   └── commands/
-│       ├── spawn.md                   ← factory: creates new product repos
-│       ├── prfaq.md                   ← loads a PR/FAQ and generates the backlog
-│       ├── epic.md                    ← creates a single epic interactively
-│       ├── story.md                   ← creates a single story interactively
-│       └── roadmap-sync.md            ← syncs issues into GitHub Projects
+│   └── commands/                           ← Claude Code slash command proxies
+│       ├── spawn.md                        → .agents/skills/spawn/SKILL.md
+│       ├── prfaq.md                        → .agents/skills/prfaq/SKILL.md
+│       ├── epic.md                         → .agents/skills/epic/SKILL.md
+│       ├── story.md                        → .agents/skills/story/SKILL.md
+│       ├── roadmap-sync.md                 → .agents/skills/roadmap-sync/SKILL.md
+│       └── readme.md                       → .agents/skills/readme/SKILL.md
 └── .github/
     └── workflows/
-        └── epic-status-cascade.yml    ← auto-derives epic status from stories
+        └── epic-status-cascade.yml         ← auto-derives epic status from stories
 ```
+
+Skills in `.agents/skills/` are plain Markdown — any AI agent that can read files can execute them. The `.claude/commands/` layer is Claude Code-specific and simply delegates to the same source of truth.
 
 ---
 
