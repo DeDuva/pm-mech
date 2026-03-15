@@ -82,9 +82,12 @@ Once the user confirms, create all issues using `gh` CLI:
      ```bash
      gh issue comment <epic-number> --repo $REPO --body "Story created: #${STORY_NUM} — <title>"
      ```
-   - Create the native sub-issue relationship (required for epic-status-cascade workflow):
+   - Create the native sub-issue relationship (required for epic-status-cascade workflow).
+     `sub_issue_id` must be the integer **database ID** (not the issue number) — fetch it first:
      ```bash
-     gh api repos/$REPO/issues/<epic-number>/sub_issues -X POST -F sub_issue_id=$STORY_NUM
+     STORY_DB_ID=$(gh api repos/$REPO/issues/$STORY_NUM --jq '.id')
+     echo "{\"sub_issue_id\": $STORY_DB_ID}" | \
+       gh api repos/$REPO/issues/<epic-number>/sub_issues -X POST --input -
      ```
 
 4. **Report results**: Output a summary table:

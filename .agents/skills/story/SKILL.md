@@ -88,8 +88,11 @@ gh issue comment <epic-number> \
   --body "Story created: #${STORY_NUM} — <story-title>"
 
 # Create the native sub-issue relationship (enables epic-status-cascade workflow)
-gh api repos/$REPO/issues/<epic-number>/sub_issues \
-  -X POST -F sub_issue_id=$STORY_NUM
+# NOTE: sub_issue_id must be the integer DATABASE ID (not the issue number).
+# Get it from the REST API, then POST as JSON body.
+STORY_DB_ID=$(gh api repos/$REPO/issues/$STORY_NUM --jq '.id')
+echo "{\"sub_issue_id\": $STORY_DB_ID}" | \
+  gh api repos/$REPO/issues/<epic-number>/sub_issues -X POST --input -
 ```
 
 After creating, output the issue number and URL clearly.
