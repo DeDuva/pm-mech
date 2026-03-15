@@ -70,13 +70,18 @@ Open the project to see your items across three views:
 
 ## Project Views
 
-If this repo was created with the `spawn` skill, three views are already set up:
+GitHub Projects v2 does not support view creation via API — views must be configured manually in the UI. After syncing, advise the user to set up these three views if they haven't already:
 
-1. **Backlog** — Table layout; all epics and stories in one place
-2. **Sprint Board** — Board layout with Todo / In Progress / Done columns (driven by the `epic-status-cascade` workflow)
-3. **Roadmap** — Roadmap layout; assign milestones with due dates to see a timeline
+1. **Backlog** — click "New view" → Table layout → rename to "Backlog"
+   All epics and stories in one place.
 
-If the views are missing (e.g. the repo was created manually), create them in the GitHub Projects UI or re-run the view creation GraphQL mutations from the `spawn` skill (Step 7b).
+2. **Sprint Board** — click "New view" → Board layout → group by **Status**
+   Produces Todo / In Progress / Done columns; the `epic-status-cascade` workflow keeps epic cards in sync automatically.
+
+3. **Roadmap** — click "New view" → Roadmap layout
+   Assign milestones with due dates to populate the timeline.
+
+Direct link to configure views: `https://github.com/users/$OWNER/projects/<number>/views/1`
 
 ## Notes
 

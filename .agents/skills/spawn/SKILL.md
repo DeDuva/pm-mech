@@ -9,8 +9,9 @@ You are a DevOps automation assistant. Your job is to create a new, fully-wired 
 3. Creates a "Product Roadmap" GitHub Project for the new repo
 4. Extracts project/field IDs and sets them as repository variables so the workflow is immediately operational
 5. Links the project to the new repo
-6. Creates 3 project views: Backlog (table), Sprint Board (board by Status), Roadmap (roadmap layout)
-7. Outputs a setup checklist and next steps
+6. Outputs a setup checklist and next steps
+
+> **Note:** GitHub Projects v2 does not expose view management via API (confirmed — no `addProjectV2View` or `updateProjectV2View` mutations exist in the schema). Views must be created manually in the UI. The output summary includes direct links and instructions.
 
 ## Instructions
 
@@ -120,91 +121,6 @@ From the JSON response, extract:
 
 If the Status field or its options don't exist yet (can happen with API-created projects), create them manually via the Projects UI before proceeding, then re-run the query.
 
-### Step 7b: Create the 3 project views
-
-Now that `$PROJECT_ID` and `$STATUS_FIELD` are known, create the standard views.
-
-**1. Get the default view ID** (GitHub auto-creates "View 1" when the project is made):
-
-```bash
-gh api graphql -f query='
-query($projectId: ID!) {
-  node(id: $projectId) {
-    ... on ProjectV2 {
-      views(first: 1) {
-        nodes { id name }
-      }
-    }
-  }
-}' -f projectId="$PROJECT_ID"
-```
-
-Capture `data.node.views.nodes[0].id` as `$DEFAULT_VIEW_ID`.
-
-**2. Rename "View 1" → "Backlog"** (table layout, shows all items):
-
-```bash
-gh api graphql -f query='
-mutation($projectId: ID!, $viewId: ID!) {
-  updateProjectV2View(input: {
-    projectId: $projectId
-    viewId:    $viewId
-    name:      "Backlog"
-  }) {
-    projectView { id name }
-  }
-}' -f projectId="$PROJECT_ID" -f viewId="$DEFAULT_VIEW_ID"
-```
-
-**3. Create "Sprint Board"** (board layout — columns are the Status options):
-
-```bash
-gh api graphql -f query='
-mutation($projectId: ID!) {
-  addProjectV2View(input: {
-    projectId: $projectId
-    name:      "Sprint Board"
-    layout:    BOARD_LAYOUT
-  }) {
-    projectView { id name }
-  }
-}' -f projectId="$PROJECT_ID"
-```
-
-Capture `data.addProjectV2View.projectView.id` as `$SPRINT_VIEW_ID`.
-
-**4. Set Sprint Board columns = Status field**:
-
-```bash
-gh api graphql -f query='
-mutation($projectId: ID!, $viewId: ID!, $fieldId: ID!) {
-  updateProjectV2View(input: {
-    projectId:    $projectId
-    viewId:       $viewId
-    groupByFields: [$fieldId]
-  }) {
-    projectView { id name }
-  }
-}' -f projectId="$PROJECT_ID" -f viewId="$SPRINT_VIEW_ID" -f fieldId="$STATUS_FIELD"
-```
-
-**5. Create "Roadmap"** (roadmap layout — use milestone dates for timeline):
-
-```bash
-gh api graphql -f query='
-mutation($projectId: ID!) {
-  addProjectV2View(input: {
-    projectId: $projectId
-    name:      "Roadmap"
-    layout:    ROADMAP_LAYOUT
-  }) {
-    projectView { id name }
-  }
-}' -f projectId="$PROJECT_ID"
-```
-
-The project now has three views: **Backlog** (table), **Sprint Board** (board with Todo/In Progress/Done columns), **Roadmap** (timeline).
-
 ### Step 8: Set repository variables on the new repo
 
 ```bash
@@ -228,21 +144,24 @@ Project: https://github.com/users/$OWNER/projects/$PROJECT_NUM
 ✅  Repo created from template ($TEMPLATE)
 ✅  9 labels created
 ✅  GitHub Project created and linked
-✅  3 project views created: Backlog · Sprint Board · Roadmap
 ✅  Repository variables set — workflow is wired
 
-⚠️  One manual step required:
-    The epic-status-cascade workflow needs a secret named PROJECT_TOKEN.
-    This is a GitHub PAT with the 'project' OAuth scope.
+⚠️  Two manual steps required:
 
-    If you already have one in another repo, add it here:
-    → https://github.com/$OWNER/<product-name>/settings/secrets/actions
+  1. Add PROJECT_TOKEN secret (GitHub PAT with 'project' scope):
+     → https://github.com/$OWNER/<product-name>/settings/secrets/actions
+     To create a new PAT: https://github.com/settings/tokens (classic, check 'project')
 
-    To create a new PAT:
-    → https://github.com/settings/tokens  (classic token, check 'project' scope)
+  2. Set up the 3 recommended project views at:
+     → https://github.com/users/$OWNER/projects/$PROJECT_NUM/views/1
+     (GitHub Projects API does not support view creation — UI only)
+
+     Backlog   — click "New view" → Table layout → rename "Backlog"
+     Sprint Board — click "New view" → Board layout → group by Status
+     Roadmap   — click "New view" → Roadmap layout
 
 Next steps:
-  1. Add the PROJECT_TOKEN secret (above)
+  1. Complete the two manual steps above
   2. Clone the repo:
        git clone https://github.com/$OWNER/<product-name>.git
   3. Open it in your AI agent
