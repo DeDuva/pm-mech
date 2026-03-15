@@ -85,7 +85,7 @@ Confirm when prompted. Claude then does the rest automatically:
 
 1. Creates `DeDuva/pm-widget` from this template
 2. Creates all 9 labels in the new repo
-3. Creates a "Product Roadmap: pm-widget" GitHub Project
+3. Copies the "pm-mech: Project Template" project to create "Product Roadmap: pm-widget" — including the pre-configured Backlog, Sprint Board, and Roadmap views
 4. Queries the project's GraphQL IDs (Status field + Todo/In Progress/Done options)
 5. Sets those as GitHub Actions repository variables so the workflow is immediately wired
 
