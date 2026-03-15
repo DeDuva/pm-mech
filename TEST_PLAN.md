@@ -127,7 +127,7 @@ All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-202603
 | Stories reference parent epics | Open any story issue in browser → body contains `Part of #<number>` |
 | Epics have story comments | `gh issue view <epic-number> --repo DeDuva/pm-test-<date> --comments` → at least one comment linking child stories |
 | `PRFAQ.md` committed to repo | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md` → 200 OK (file exists) |
-| `PRFAQ.md` matches source | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md --jq '.content' \| base64 -d \| diff - test_prfaq.md` → no diff |
+| `PRFAQ.md` matches source | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md --jq '.content' \| base64 -d \| diff - ../pm-mech/test_prfaq.md` → no diff |
 
 **Pass criteria:** Issues land in the test repo only; all structural links are correct; PRFAQ.md is committed.
 
