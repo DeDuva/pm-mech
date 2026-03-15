@@ -106,29 +106,12 @@ All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-202603
 
 **Steps:**
 1. From the `pm-test-<date>` Claude Code session, run `/prfaq`
-2. Paste the following minimal PR/FAQ when prompted:
-
-```
-PRESS RELEASE
-
-FOR IMMEDIATE RELEASE
-
-Introducing TaskPilot — the to-do app that prioritises itself.
-
-TaskPilot is a task management app for busy professionals. Users add tasks and TaskPilot automatically ranks them by urgency, deadline, and personal work patterns. No more wasted time deciding what to work on next.
-
-FAQ
-
-Q: How does it know what's urgent?
-A: It combines deadline proximity, estimated effort, and the user's historical completion rate per category.
-
-Q: What platforms does it support?
-A: Web first, then iOS and Android.
-
-Q: How do we monetise?
-A: Freemium — free for up to 20 tasks, $8/month for unlimited.
-```
-
+2. When prompted for the PR/FAQ, paste the contents of `test_prfaq.md` from the pm-mech repo:
+   ```bash
+   # From a terminal in pm-mech:
+   cat test_prfaq.md
+   ```
+   Copy the output and paste it into the Claude session.
 3. Confirm the proposed epics (accept the defaults)
 4. Confirm the proposed stories (accept the defaults)
 5. Allow Claude to create all issues
@@ -144,7 +127,7 @@ A: Freemium — free for up to 20 tasks, $8/month for unlimited.
 | Stories reference parent epics | Open any story issue in browser → body contains `Part of #<number>` |
 | Epics have story comments | `gh issue view <epic-number> --repo DeDuva/pm-test-<date> --comments` → at least one comment linking child stories |
 | `PRFAQ.md` committed to repo | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md` → 200 OK (file exists) |
-| `PRFAQ.md` contains the original text | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md --jq '.content' \| base64 -d` → contains "TaskPilot" |
+| `PRFAQ.md` matches source | `gh api repos/DeDuva/pm-test-<date>/contents/PRFAQ.md --jq '.content' \| base64 -d \| diff - test_prfaq.md` → no diff |
 
 **Pass criteria:** Issues land in the test repo only; all structural links are correct; PRFAQ.md is committed.
 
@@ -287,7 +270,7 @@ Open `https://github.com/DeDuva/pm-test-<date>`
 | Check | What to look for |
 |---|---|
 | `PRFAQ.md` present | File listed in the repo root |
-| `PRFAQ.md` content | Click the file — should contain the full TaskPilot PR/FAQ text |
+| `PRFAQ.md` content | Click the file — should match the contents of `test_prfaq.md` in pm-mech |
 | `README.md` updated | If `/prfaq` auto-ran `/readme`, the README should reflect the product, not the pm-mech template |
 | `.agents/skills/` present | Directory visible in the file tree |
 | `.github/workflows/` present | `epic-status-cascade.yml` listed |
