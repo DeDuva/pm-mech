@@ -26,7 +26,7 @@ jobs:
             const OPT_INPROG    = "${{ vars.STATUS_OPT_INPROG }}";
             const OPT_DONE      = "${{ vars.STATUS_OPT_DONE }}";
 
-            // ── Fetch all epics and their sub-issues from the project ─────────
+            // ── Fetch all project items with labels and sub-issues ────────────
             const result = await github.graphql(`
               query($projectId: ID!) {
                 node(id: $projectId) {
@@ -40,6 +40,9 @@ jobs:
                             id
                             number
                             state
+                            labels(first: 10) {
+                              nodes { name }
+                            }
                             subIssues(first: 30) {
                               nodes {
                                 id
@@ -82,13 +85,10 @@ jobs:
 
             const items = result.node.items.nodes;
 
-            // ── Filter to epics using the Type project field (avoids needing repo scope) ─
-            const epics = items.filter(item => {
-              const typeField = item.fieldValues.nodes.find(
-                fv => fv?.field?.name === "Type"
-              );
-              return typeField?.name === "Epic";
-            });
+            // ── Filter to epics by the "epic" label (no custom Type field required) ─
+            const epics = items.filter(item =>
+              item.content?.labels?.nodes?.some(l => l.name === "epic") ?? false
+            );
 
             console.log(`Found ${epics.length} epics to evaluate.`);
 

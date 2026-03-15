@@ -59,7 +59,19 @@ Once the user confirms, create all issues using `gh` CLI:
 3. **Create each story** using the Story template (see `/story` command for template).
    - Apply labels: `story`, `prfaq-import`, plus domain label if identifiable
    - Reference parent epic in body: `Part of #<epic-number>`
-   - After creation, comment on the epic issue to register the child story
+   - Capture the story number by parsing it from the returned issue URL:
+     ```bash
+     STORY_URL=$(gh issue create --repo $REPO --title "..." --body "..." --label "...")
+     STORY_NUM="${STORY_URL##*/}"
+     ```
+   - Comment on the epic issue to register the child story:
+     ```bash
+     gh issue comment <epic-number> --repo $REPO --body "Story created: #${STORY_NUM} — <title>"
+     ```
+   - Create the native sub-issue relationship (required for epic-status-cascade workflow):
+     ```bash
+     gh api repos/$REPO/issues/<epic-number>/sub_issues -X POST -F sub_issue_id=$STORY_NUM
+     ```
 
 4. **Report results**: Output a summary table:
    ```

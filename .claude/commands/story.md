@@ -74,17 +74,22 @@ REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
 # Ensure labels exist
 gh label create story --color "#0075ca" --description "A user story" --repo $REPO 2>/dev/null || true
 
-# Create the story issue
-gh issue create \
+# Create the story issue — capture the URL, then parse the number from it
+STORY_URL=$(gh issue create \
   --repo $REPO \
   --title "[STORY] <title>" \
   --body "<body>" \
-  --label "story"
+  --label "story")
+STORY_NUM="${STORY_URL##*/}"
 
 # Add a comment linking to the epic
 gh issue comment <epic-number> \
   --repo $REPO \
-  --body "Story created: #<story-number> — <story-title>"
+  --body "Story created: #${STORY_NUM} — <story-title>"
+
+# Create the native sub-issue relationship (enables epic-status-cascade workflow)
+gh api repos/$REPO/issues/<epic-number>/sub_issues \
+  -X POST -F sub_issue_id=$STORY_NUM
 ```
 
 After creating, output the issue number and URL clearly.

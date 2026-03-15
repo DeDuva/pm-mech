@@ -30,6 +30,15 @@ gh repo view --json nameWithOwner,owner -q '"\(.nameWithOwner) \(.owner.login)"'
 
 Store `nameWithOwner` as `$TEMPLATE` (e.g. `DeDuva/pm-mech`) and `owner.login` as `$OWNER` (e.g. `DeDuva`).
 
+### Step 2b: Ensure this repo is marked as a GitHub template (idempotent)
+
+GitHub requires the source repo to have the template flag set before `--template` cloning works.
+Run this once — it is a no-op if the flag is already set:
+
+```bash
+gh repo edit $TEMPLATE --template
+```
+
 ### Step 3: Create the new repo from this template
 
 ```bash
