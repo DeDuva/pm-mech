@@ -41,8 +41,9 @@ All test cases use a throwaway repo named `pm-test-<date>` (e.g. `pm-test-202603
 | Project linked to repo | `gh api repos/DeDuva/pm-test-<date>/projects --jq '.[].name'` → `Product Roadmap: pm-test-<date>` |
 | All 5 repo variables set | `gh api repos/DeDuva/pm-test-<date>/actions/variables --jq '.variables[].name'` → `PROJECT_ID`, `STATUS_FIELD`, `STATUS_OPT_TODO`, `STATUS_OPT_INPROG`, `STATUS_OPT_DONE` |
 | Variable values are non-empty | `gh api repos/DeDuva/pm-test-<date>/actions/variables --jq '.variables[] | "\(.name)=\(.value)"'` → no empty values |
+| 3 views present in project | Open project URL in browser → tabs show **Backlog**, **Sprint Board**, **Roadmap** |
 
-**Pass criteria:** All 8 checks pass with no errors.
+**Pass criteria:** All 9 checks pass with no errors.
 
 ---
 
@@ -298,19 +299,15 @@ Open the project URL printed by `/roadmap-sync` (format: `https://github.com/use
 | Status column visible | Default "Status" field shown |
 | Epic from TC-08 is "Done" | The epic you closed all stories for shows "Done" status |
 
-### 10d — Project views (manual setup, if not already configured)
+### 10d — Project views (auto-configured by spawn)
 
-GitHub Projects v2 does not support view creation via API — set these up once:
-
-1. Click **+ New view** → **Table** layout → rename to **Backlog**
-2. Click **+ New view** → **Board** layout → group by **Status** → rename to **Sprint Board**
-3. Click **+ New view** → **Roadmap** layout → rename to **Roadmap**
+Views are copied automatically from the "pm-mech: Project Template" project via `copyProjectV2`. No manual setup required.
 
 | Check | What to look for |
 |---|---|
-| Backlog view | All issues visible in a flat table |
-| Sprint Board | Todo / In Progress / Done columns with issue cards |
-| Roadmap view | Timeline visible (assign milestones with due dates to populate bars) |
+| Backlog view | Tab present; all issues visible in a flat table |
+| Sprint Board | Tab present; Todo / In Progress / Done columns with issue cards |
+| Roadmap view | Tab present; Start date / Target date fields available on items |
 
 **Pass criteria:** All items visible in the UI; project board shows correct statuses; PRFAQ.md matches the source text.
 
@@ -340,5 +337,5 @@ All 10 TCs must pass before merging changes to `main`.
 - **`PROJECT_TOKEN` secret** is not verifiable via CLI (write-only). TC-02 implicitly validates it by running the workflow.
 - **Status cascade timing** — the workflow runs on a 30-minute schedule and on `issues.closed`. In TC-08 we trigger it manually to avoid waiting.
 - **GitHub Projects UI fields** (Priority, Quarter, Sprint) are not covered here — they require manual setup and have no CLI assertions.
-- **Project views** cannot be created via API (GitHub Projects v2 limitation). TC-10d covers manual setup.
+- **Project views** are copied automatically via `copyProjectV2` from the "pm-mech: Project Template" project (project #6 on DeDuva). If that template is deleted, views will not appear — recreate it and re-configure the 3 views once before spawning again.
 - **Artifacts are intentionally left in place** after a test run. Delete manually via `gh repo delete DeDuva/pm-test-<date> --yes` and `gh project delete <n> --owner DeDuva` when you are done reviewing.
